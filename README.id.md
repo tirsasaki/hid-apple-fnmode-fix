@@ -1,4 +1,4 @@
-[English](README.md) | **Bahasa Indonesia**
+[English](README.md) | **Bahasa Indonesia** | [日本語](README.ja.md)
 
 # Memperbaiki Mapping Tombol F-Key di Linux (`hid_apple`)
 
