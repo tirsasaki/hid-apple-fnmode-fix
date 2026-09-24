@@ -2,11 +2,10 @@
 
 # Memperbaiki Mapping Tombol F-Key di Linux (`hid_apple`)
 
-Beberapa keyboard pihak ketiga, termasuk Rexus M84X dan keyboard 75% lainnya, menggunakan firmware yang kompatibel dengan Apple. Di Linux, hal ini dapat menyebabkan F1–F12 berfungsi sebagai tombol multimedia, bukan function key standar.
+Beberapa keyboard, seperti Rexus M84X, menggunakan firmware yang kompatibel dengan Apple. Linux mendeteksinya sebagai keyboard Apple dan menanganinya dengan modul kernel `hid_apple`, sehingga F1–F12 secara default berfungsi sebagai tombol media, bukan function key standar.
 
-Panduan ini mengatur modul kernel `hid_apple` agar F1–F12 berfungsi sebagai function key standar secara default.
+Panduan ini mengatur parameter `fnmode` dari modul `hid_apple` agar F1–F12 secara default berfungsi sebagai function key standar.
 
-<!-- ADDED: Daftar isi untuk memudahkan navigasi. -->
 ## Daftar isi
 
 - [Gejala](#gejala)
@@ -16,14 +15,13 @@ Panduan ini mengatur modul kernel `hid_apple` agar F1–F12 berfungsi sebagai fu
 - [Buat perubahan permanen](#buat-perubahan-permanen)
 - [Verifikasi hasil](#verifikasi-hasil)
 - [Pemecahan masalah](#pemecahan-masalah)
-- [Telah diuji pada](#telah-diuji-pada)
 - [Catatan](#catatan)
-- [Lisensi dan kontribusi](#lisensi-dan-kontribusi)
+- [Kontribusi](#kontribusi)
 
 ## Gejala
 
-- Menekan F4 malah membuka browser, bukan menghasilkan input F4.
-- F1–F12 menghasilkan aksi media atau fungsi khusus, bukan input function key standar.
+- Menekan F4 (atau F-key lainnya) memicu aksi media atau fungsi khusus, bukan menghasilkan input F4.
+- F1–F12 hanya berfungsi sebagai function key standar saat `Fn` ditekan.
 - Masalah terjadi pada beberapa keyboard non-Apple yang menggunakan firmware kompatibel Apple.
 
 ## Penyebab
@@ -32,9 +30,9 @@ Linux menangani keyboard tersebut melalui modul kernel `hid_apple`. Parameter `f
 
 | Nilai | Perilaku |
 | --- | --- |
-| `0` | Menonaktifkan F-key sepenuhnya; hanya fungsi media yang tersedia |
-| `1` | F-key aktif hanya saat tombol `Fn` ditekan |
-| `2` | F-key aktif secara default—perilaku yang diinginkan dalam panduan ini |
+| `0` | `Fn` dinonaktifkan; F1–F12 selalu berfungsi sebagai function key standar dan fungsi media tidak tersedia |
+| `1` | Tombol media secara default; F-key hanya saat `Fn` ditekan |
+| `2` | F-key secara default; fungsi media saat `Fn` ditekan (perilaku yang digunakan dalam panduan ini) |
 
 ## Periksa status saat ini
 
@@ -45,7 +43,7 @@ lsmod | grep hid_apple
 dmesg | grep -i apple
 ```
 
-Jika modul aktif, lanjutkan ke bagian berikutnya.
+Jika `lsmod` menampilkan baris `hid_apple`, lanjutkan ke bagian berikutnya. Jika tidak menampilkan apa pun, keyboard Anda tidak ditangani oleh `hid_apple` dan panduan ini tidak berlaku.
 
 ## Coba sementara
 
@@ -57,11 +55,21 @@ sudo modprobe hid_apple fnmode=2
 ```
 
 > [!NOTE]
-> Perubahan ini bersifat sementara. Setelah reboot, konfigurasi dalam `/etc/modprobe.d/hid_apple.conf`, setelah file tersebut dibuat, akan berlaku.
+> Perubahan ini akan hilang setelah reboot kecuali Anda menyelesaikan pengaturan permanen di bawah ini.
+
+> [!TIP]
+> Memuat ulang modul dapat membuat keyboard tidak merespons untuk sesaat. Untuk menghindarinya, atur nilainya secara langsung tanpa memuat ulang modul:
+>
+> ```bash
+> echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode
+> ```
 
 Uji F4 atau function key lainnya sebelum melanjutkan ke pengaturan permanen.
 
 ## Buat perubahan permanen
+
+> [!WARNING]
+> Konfigurasi ini berlaku secara global untuk setiap keyboard yang menggunakan modul `hid_apple`.
 
 ### 1. Buat file konfigurasi
 
@@ -97,7 +105,7 @@ sudo dracut --force
 sudo reboot
 ```
 
-#### Arch Linux, Manjaro, atau EndeavourOS
+#### Arch Linux, Manjaro, EndeavourOS, atau CachyOS
 
 ```bash
 sudo mkinitcpio -P
@@ -106,7 +114,7 @@ sudo reboot
 
 ## Verifikasi hasil
 
-Setelah reboot, tekan F4 dan pastikan tombol tersebut menghasilkan input F4, bukan membuka browser.
+Setelah reboot, tekan F4 dan pastikan tombol tersebut menghasilkan input F4, bukan memicu aksi media atau fungsi khusus.
 
 Anda juga dapat memeriksa nilai `fnmode` yang aktif:
 
@@ -120,7 +128,6 @@ Output yang diharapkan:
 2
 ```
 
-<!-- ADDED: Panduan pemecahan masalah disusun dari langkah konfigurasi permanen dan verifikasi yang sudah ada; tidak ada metode perbaikan baru yang ditambahkan. -->
 ## Pemecahan masalah
 
 ### `fnmode` bukan `2` setelah reboot
@@ -129,25 +136,17 @@ Output yang diharapkan:
 - **Penyebab:** Konfigurasi permanen modul belum diterapkan.
 - **Perbaikan:** Pastikan `/etc/modprobe.d/hid_apple.conf` berisi `options hid_apple fnmode=2`. Kemudian bangun ulang initramfs menggunakan perintah yang sesuai dengan distribusi Anda dan lakukan reboot kembali.
 
-## Telah diuji pada
+### `fnmode` sudah `2`, tetapi F-key masih berperilaku tidak sesuai harapan
 
-| Distribusi | Kernel | Keyboard |
-| --- | --- | --- |
-| Debian 13 | `<isi di sini>` | `<isi di sini>` |
-| Fedora 44 | `<isi di sini>` | `<isi di sini>` |
-| Arch Linux | `<isi di sini>` | `<isi di sini>` |
+- **Masalah:** Nilainya sudah benar, tetapi baris F-key tidak berperilaku sesuai harapan.
+- **Penyebab:** Beberapa keyboard memiliki sakelar Fn Lock fisik atau kombinasi tombol `Fn` yang juga mengubah cara kerja baris F-key.
+- **Perbaikan:** Periksa panduan keyboard Anda untuk cara mengaktifkan atau menonaktifkan Fn Lock, lalu coba ubah pengaturannya.
 
 ## Catatan
 
 > [!TIP]
 > `/etc/modprobe.d/hid_apple.conf` akan hilang jika sistem operasi diinstal ulang. Sebaiknya buat cadangan file ini.
 
-> [!WARNING]
-> Konfigurasi ini berlaku secara global untuk setiap keyboard yang menggunakan modul `hid_apple`.
-
-<!-- ADDED: README asli tidak menetapkan lisensi atau proses kontribusi. -->
-## Lisensi dan kontribusi
-
-Repository ini belum menetapkan lisensi. Tambahkan file `LICENSE` untuk menjelaskan bagaimana orang lain boleh menggunakan, memodifikasi, dan mendistribusikan proyek ini.
+## Kontribusi
 
 Kontribusi dapat diajukan melalui GitHub Issues atau pull request.
