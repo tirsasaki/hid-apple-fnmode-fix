@@ -2,11 +2,10 @@
 
 # Fix F-Key Keyboard Mapping on Linux (`hid_apple`)
 
-Some third-party keyboards, including the Rexus M84X and other 75% keyboards, use Apple-compatible firmware. On Linux, this can cause F1–F12 to act as multimedia keys instead of standard function keys.
+Some keyboards, such as the Rexus M84X, use Apple-compatible firmware. Linux detects them as Apple keyboards and handles them with the `hid_apple` kernel module, which makes F1–F12 act as media keys by default instead of standard function keys.
 
-This guide configures the `hid_apple` kernel module so F1–F12 work as standard function keys by default.
+This guide sets the `fnmode` parameter of the `hid_apple` module so F1–F12 work as standard function keys by default.
 
-<!-- ADDED: Table of contents for easier navigation. -->
 ## Contents
 
 - [Symptom](#symptom)
@@ -16,14 +15,13 @@ This guide configures the `hid_apple` kernel module so F1–F12 work as standard
 - [Make the change permanent](#make-the-change-permanent)
 - [Verify the result](#verify-the-result)
 - [Troubleshooting](#troubleshooting)
-- [Tested on](#tested-on)
 - [Notes](#notes)
-- [License and contributing](#license-and-contributing)
+- [Contributing](#contributing)
 
 ## Symptom
 
-- Pressing F4 opens a browser instead of producing an F4 input.
-- F1–F12 trigger media or special actions instead of standard function-key inputs.
+- Pressing F4 (or another F-key) triggers a media or special action instead of producing an F4 input.
+- F1–F12 only behave as standard function keys while `Fn` is held down.
 - The issue occurs on some non-Apple keyboards that use Apple-compatible firmware.
 
 ## Cause
@@ -32,9 +30,9 @@ Linux handles these keyboards through the `hid_apple` kernel module. Its `fnmode
 
 | Value | Behavior |
 | --- | --- |
-| `0` | Disables F-keys completely; only media functions are available |
-| `1` | F-keys are active only while the `Fn` key is pressed |
-| `2` | F-keys are active by default—the desired behavior in this guide |
+| `0` | `Fn` is disabled; F1–F12 always act as standard function keys and media functions are unavailable |
+| `1` | Media keys by default; F-keys only while `Fn` is pressed |
+| `2` | F-keys by default; media functions while `Fn` is pressed (the behavior used in this guide) |
 
 ## Check the current state
 
@@ -45,7 +43,7 @@ lsmod | grep hid_apple
 dmesg | grep -i apple
 ```
 
-If the module is active, continue to the next section.
+If `lsmod` prints a `hid_apple` line, continue to the next section. If it prints nothing, your keyboard is not handled by `hid_apple` and this guide does not apply.
 
 ## Try it temporarily
 
@@ -57,11 +55,21 @@ sudo modprobe hid_apple fnmode=2
 ```
 
 > [!NOTE]
-> This change is temporary. After a reboot, the configuration in `/etc/modprobe.d/hid_apple.conf`, once created, will take effect.
+> This change is lost after a reboot unless you complete the permanent setup below.
+
+> [!TIP]
+> Reloading the module may make the keyboard unresponsive for a moment. To avoid this, set the value directly without reloading the module:
+>
+> ```bash
+> echo 2 | sudo tee /sys/module/hid_apple/parameters/fnmode
+> ```
 
 Test F4 or another function key before continuing with the permanent setup.
 
 ## Make the change permanent
+
+> [!WARNING]
+> This configuration applies globally to every keyboard that uses the `hid_apple` module.
 
 ### 1. Create the configuration file
 
@@ -97,7 +105,7 @@ sudo dracut --force
 sudo reboot
 ```
 
-#### Arch Linux, Manjaro, or EndeavourOS
+#### Arch Linux, Manjaro, EndeavourOS, or CachyOS
 
 ```bash
 sudo mkinitcpio -P
@@ -106,7 +114,7 @@ sudo reboot
 
 ## Verify the result
 
-After rebooting, press F4 and confirm that it produces an F4 input instead of opening a browser.
+After rebooting, press F4 and confirm that it produces an F4 input instead of triggering a media or special action.
 
 You can also check the active `fnmode` value:
 
@@ -120,7 +128,6 @@ Expected output:
 2
 ```
 
-<!-- ADDED: Troubleshooting guidance assembled from the existing permanent-configuration and verification steps; no new fix method is introduced. -->
 ## Troubleshooting
 
 ### `fnmode` is not `2` after reboot
@@ -129,25 +136,17 @@ Expected output:
 - **Cause:** The permanent module configuration has not taken effect.
 - **Fix:** Confirm that `/etc/modprobe.d/hid_apple.conf` contains `options hid_apple fnmode=2`. Then rebuild initramfs using the command for your distribution and reboot again.
 
-## Tested on
+### `fnmode` is `2` but the F-keys still behave unexpectedly
 
-| Distribution | Kernel | Keyboard |
-| --- | --- | --- |
-| Debian 13 | `<fill in>` | `<fill in>` |
-| Fedora 44 | `<fill in>` | `<fill in>` |
-| Arch Linux | `<fill in>` | `<fill in>` |
+- **Problem:** The value is correct, but the F-row does not behave as expected.
+- **Cause:** Some keyboards have a physical Fn Lock switch or an `Fn` key combination that also changes how the F-row works.
+- **Fix:** Check your keyboard's manual for an Fn Lock toggle and try switching it.
 
 ## Notes
 
 > [!TIP]
 > `/etc/modprobe.d/hid_apple.conf` will be lost if the operating system is reinstalled. Consider backing up this file.
 
-> [!WARNING]
-> This configuration applies globally to every keyboard that uses the `hid_apple` module.
-
-<!-- ADDED: The original README does not specify a license or contribution process. -->
-## License and contributing
-
-No license is currently specified for this repository. Add a `LICENSE` file to clearly state how others may use, modify, and distribute the project.
+## Contributing
 
 Contributions can be proposed through GitHub issues or pull requests.
