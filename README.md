@@ -1,4 +1,4 @@
-**English** | [Bahasa Indonesia](README.id.md)
+**English** | [Bahasa Indonesia](README.id.md) | [日本語](README.ja.md)
 
 # Fix F-Key Keyboard Mapping on Linux (`hid_apple`)
 
